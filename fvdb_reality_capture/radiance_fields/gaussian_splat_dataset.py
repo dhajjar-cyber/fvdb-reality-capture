@@ -233,17 +233,18 @@ class SfmDataset(torch.utils.data.Dataset, Iterable):
         image_meta: SfmPosedImageMetadata = self._sfm_scene.images[index]
         camera_meta: SfmCameraMetadata = image_meta.camera_metadata
 
-        if image_meta.image_path.endswith(".jpg") or image_meta.image_path.endswith(".jpeg"):
-            data = torchvision.io.read_file(image_meta.image_path)
+        image_path_str = str(image_meta.image_path)
+        if image_path_str.endswith(".jpg") or image_path_str.endswith(".jpeg"):
+            data = torchvision.io.read_file(image_path_str)
             image = torchvision.io.decode_jpeg(data, device="cpu")
             assert isinstance(image, torch.Tensor)
             image = image.permute(1, 2, 0).numpy()
-        elif image_meta.image_path.endswith(".png"):
-            data = torchvision.io.read_file(image_meta.image_path)
+        elif image_path_str.endswith(".png"):
+            data = torchvision.io.read_file(image_path_str)
             image = torchvision.io.decode_png(data).permute(1, 2, 0).numpy()
         else:
-            image = cv2.imread(image_meta.image_path, cv2.IMREAD_UNCHANGED)
-            assert image is not None, f"Failed to load image: {image_meta.image_path}"
+            image = cv2.imread(image_path_str, cv2.IMREAD_UNCHANGED)
+            assert image is not None, f"Failed to load image: {image_path_str}"
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         if image.ndim == 2:
@@ -269,23 +270,24 @@ class SfmDataset(torch.utils.data.Dataset, Iterable):
             "world_to_camera": torch.from_numpy(world_to_camera_matrix).float(),
             "image": image,
             "image_id": item,  # the index of the image in the dataset
-            "image_path": image_meta.image_path,
+            "image_path": image_path_str,
         }
 
         # If you passed in masks, we'll set set these in the data dictionary
-        if image_meta.mask_path != "":
-            if image_meta.mask_path.endswith(".jpg") or image_meta.mask_path.endswith(".jpeg"):
-                img_data = torchvision.io.read_file(image_meta.mask_path)
+        mask_path_str = str(image_meta.mask_path)
+        if mask_path_str != "":
+            if mask_path_str.endswith(".jpg") or mask_path_str.endswith(".jpeg"):
+                img_data = torchvision.io.read_file(mask_path_str)
                 mask = torchvision.io.decode_jpeg(img_data, device="cpu")[0].numpy()
-            elif image_meta.mask_path.endswith(".png"):
-                img_data = torchvision.io.read_file(image_meta.mask_path)
+            elif mask_path_str.endswith(".png"):
+                img_data = torchvision.io.read_file(mask_path_str)
                 mask = torchvision.io.decode_png(img_data)[0].numpy()
             else:
-                mask = cv2.imread(image_meta.mask_path, cv2.IMREAD_GRAYSCALE)
-                assert mask is not None, f"Failed to load mask: {image_meta.mask_path}"
+                mask = cv2.imread(mask_path_str, cv2.IMREAD_GRAYSCALE)
+                assert mask is not None, f"Failed to load mask: {mask_path_str}"
             mask = mask > 127
 
-            data["mask_path"] = image_meta.mask_path
+            data["mask_path"] = mask_path_str
             data["mask"] = mask
 
         # If you asked to load depths, we'll load the depths of visible colmap points
